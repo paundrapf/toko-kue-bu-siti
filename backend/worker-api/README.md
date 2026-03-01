@@ -2,6 +2,7 @@
 
 ## Scripts
 - `npm run dev` - Run worker locally with Wrangler.
+- `npm run test` - Run worker route tests.
 - `npm run typecheck` - Type-check TypeScript sources.
 - `npm run deploy` - Deploy worker.
 - `npm run d1:migrate:local` - Apply D1 migrations locally.
@@ -13,7 +14,7 @@
 - Initial baseline schema: `migrations/0001_initial_schema.sql`.
 - CRUD media extension: `migrations/0002_product_blog_media_fields.sql`.
 
-## Placeholder Routes
+## Routes
 - `GET /health`
 - `GET /api/products`
 - `POST /api/products`
@@ -38,3 +39,7 @@
 - Upload endpoint expects `multipart/form-data` with field `file`.
 - Allowed mime types: `image/jpeg`, `image/png`, `image/webp`.
 - Max file size: 5MB.
+
+## Notes
+- Notification routes use `FONNTE_API_KEY` and `RESEND_API_KEY` when configured.
+- Tracking requires `orderNumber + email` pair.

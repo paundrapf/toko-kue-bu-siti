@@ -6,6 +6,10 @@ node_modules/
 .wrangler/
 **/.wrangler/
 
+# Lighthouse reports
+.lighthouseci/
+**/.lighthouseci/
+
 # Logs
 *.log
 npm-debug.log*

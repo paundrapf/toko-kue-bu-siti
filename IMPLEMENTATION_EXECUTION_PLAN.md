@@ -90,3 +90,9 @@ Output file: `docs/scope-boundary-and-change-control.md`
 ### Task 5.1 - Automated tests and critical e2e flows
 ### Task 5.2 - Lighthouse/accessibility/performance hardening
 ### Task 5.3 - Docs, training package, release checklist
+
+## Progress Snapshot (2026-03-02)
+- Phase 0 to Phase 4 completed and pushed to `origin/main`.
+- Task 5.1 completed: automated tests added for frontend API client and Worker critical routes.
+- Task 5.2 completed: performance hardening via view-level code splitting, plus accessibility improvements and Lighthouse config.
+- Task 5.3 completed: QA/release/handover package documented in `docs/phase-5-qa-release-handover.md`.

@@ -44,6 +44,29 @@ body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+:focus-visible {
+  outline: 3px solid #FF6B9D;
+  outline-offset: 2px;
+}
+
+.skip-link {
+  position: absolute;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 60;
+  transform: translateY(-180%);
+  background: #111827;
+  color: #ffffff;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: transform 0.2s ease;
+}
+
+.skip-link:focus-visible {
+  transform: translateY(0);
+}
+
 /* Custom Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
@@ -312,6 +335,22 @@ body {
 .whatsapp-float:hover {
   transform: scale(1.1);
   box-shadow: 0 6px 25px rgba(37, 211, 102, 0.5);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .product-card:hover,
+  .whatsapp-float:hover {
+    transform: none;
+  }
 }
 
 /* Print Styles */
