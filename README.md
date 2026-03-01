@@ -21,3 +21,8 @@ The implementation is being migrated toward a Cloudflare full-stack architecture
 - `docs/scope-must-have-vs-optional.md`
 - `docs/scope-boundary-and-change-control.md`
 - `docs/phase-5-qa-release-handover.md`
+- `docs/cloudflare-cicd-runbook.md`
+
+## Automation
+- `.github/workflows/ci.yml` runs tests/build and Lighthouse checks.
+- `.github/workflows/deploy-cloudflare.yml` handles manual Cloudflare deployment.

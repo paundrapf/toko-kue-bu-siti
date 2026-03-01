@@ -96,3 +96,8 @@ Output file: `docs/scope-boundary-and-change-control.md`
 - Task 5.1 completed: automated tests added for frontend API client and Worker critical routes.
 - Task 5.2 completed: performance hardening via view-level code splitting, plus accessibility improvements and Lighthouse config.
 - Task 5.3 completed: QA/release/handover package documented in `docs/phase-5-qa-release-handover.md`.
+
+## Post-Phase Ongoing Hardening
+- Add CI workflow for app and worker quality gates.
+- Add manual Cloudflare deploy workflow for release operations.
+- Document CI/CD secrets, preconditions, and rollback runbook.
