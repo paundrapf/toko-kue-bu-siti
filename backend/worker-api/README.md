@@ -11,15 +11,28 @@
 ## D1 Migrations
 - Migration files are stored in `migrations/`.
 - Initial baseline schema: `migrations/0001_initial_schema.sql`.
+- CRUD media extension: `migrations/0002_product_blog_media_fields.sql`.
 
 ## Placeholder Routes
 - `GET /health`
 - `GET /api/products`
+- `POST /api/products`
+- `PUT /api/products/:id`
+- `DELETE /api/products/:id`
 - `GET /api/orders`
+- `POST /api/orders`
+- `GET /api/orders/track?orderNumber=<id>&email=<email>`
+- `PATCH /api/orders/:id/status`
+- `POST /api/orders/:id/payment-proof`
 - `GET /api/blog/posts`
+- `POST /api/blog/posts`
+- `PUT /api/blog/posts/:id`
+- `DELETE /api/blog/posts/:id`
 - `GET /api/settings`
+- `PUT /api/settings`
 - `POST /api/media/upload`
 - `GET /api/media/:key`
+- `POST /api/notifications/test`
 
 ## Media Upload Placeholder
 - Upload endpoint expects `multipart/form-data` with field `file`.

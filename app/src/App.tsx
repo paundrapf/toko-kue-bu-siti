@@ -19,6 +19,8 @@ import { BlogView } from '@/sections/BlogView';
 import { BlogDetailView } from '@/sections/BlogDetailView';
 import { AboutView } from '@/sections/AboutView';
 import { ContactView } from '@/sections/ContactView';
+import { TermsView } from '@/sections/TermsView';
+import { PrivacyView } from '@/sections/PrivacyView';
 import { AdminView } from '@/sections/AdminView';
 import { AdminLoginView } from '@/sections/AdminLoginView';
 
@@ -29,7 +31,7 @@ import {
 import { 
   useCartStore, useOrdersStore, useAdminStore, useAnalyticsStore 
 } from '@/hooks/useStore';
-import { createOrderApi, trackOrderApi, uploadPaymentProofApi } from '@/lib/api';
+import { createOrderApi, trackOrderApi, updateOrderStatusApi, uploadPaymentProofApi } from '@/lib/api';
 import type { 
   ViewState, Product, BlogPost, Order
 } from '@/types';
@@ -81,6 +83,62 @@ function App() {
     }, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  // Basic SEO metadata handling per view
+  useEffect(() => {
+    const defaultTitle = `${siteSettings.siteName} | ${siteSettings.tagline}`;
+    const defaultDescription = siteSettings.description;
+
+    let title = defaultTitle;
+    let description = defaultDescription;
+
+    if (view === 'products') {
+      title = `Produk Kue dan Cake | ${siteSettings.siteName}`;
+      description = 'Jelajahi katalog kue homemade, brownies, cake, donat, dan kue kering terbaik.';
+    } else if (view === 'product-detail' && selectedProduct) {
+      title = selectedProduct.metaTitle || `${selectedProduct.name} | ${siteSettings.siteName}`;
+      description = selectedProduct.metaDescription || selectedProduct.shortDescription;
+    } else if (view === 'blog') {
+      title = `Blog Baking dan Tips Kue | ${siteSettings.siteName}`;
+      description = 'Baca tips baking, resep, dan cerita menarik seputar dunia kue.';
+    } else if (view === 'blog-detail' && selectedBlogPost) {
+      title = selectedBlogPost.title;
+      description = selectedBlogPost.excerpt;
+    } else if (view === 'about') {
+      title = `Tentang Kami | ${siteSettings.siteName}`;
+      description = 'Kenali perjalanan, nilai, dan komitmen kualitas Toko Kue Bu Siti.';
+    } else if (view === 'contact') {
+      title = `Kontak | ${siteSettings.siteName}`;
+      description = 'Hubungi Toko Kue Bu Siti untuk pemesanan, pertanyaan, dan konsultasi kebutuhan acara.';
+    } else if (view === 'track-order') {
+      title = `Lacak Pesanan | ${siteSettings.siteName}`;
+      description = 'Lacak status pesanan Anda dengan nomor order dan email checkout.';
+    } else if (view === 'terms') {
+      title = `Syarat dan Ketentuan | ${siteSettings.siteName}`;
+      description = 'Baca syarat dan ketentuan layanan Toko Kue Bu Siti.';
+    } else if (view === 'privacy') {
+      title = `Kebijakan Privasi | ${siteSettings.siteName}`;
+      description = 'Pelajari bagaimana data pelanggan dikelola oleh Toko Kue Bu Siti.';
+    }
+
+    document.title = title;
+
+    const ensureMeta = (name: string) => {
+      let tag = document.querySelector(`meta[name="${name}"]`) as HTMLMetaElement | null;
+      if (!tag) {
+        tag = document.createElement('meta');
+        tag.name = name;
+        document.head.appendChild(tag);
+      }
+      return tag;
+    };
+
+    const descriptionTag = ensureMeta('description');
+    descriptionTag.content = description;
+
+    const robotsTag = ensureMeta('robots');
+    robotsTag.content = view === 'admin' || view === 'admin-login' ? 'noindex,nofollow' : 'index,follow';
+  }, [view, selectedProduct, selectedBlogPost]);
 
   // Navigation handlers
   const navigateToHome = () => {
@@ -142,6 +200,16 @@ function App() {
 
   const navigateToContact = () => {
     setView('contact');
+    window.scrollTo(0, 0);
+  };
+
+  const navigateToTerms = () => {
+    setView('terms');
+    window.scrollTo(0, 0);
+  };
+
+  const navigateToPrivacy = () => {
+    setView('privacy');
     window.scrollTo(0, 0);
   };
 
@@ -287,6 +355,8 @@ function App() {
             <button onClick={() => { navigateToAbout(); setIsMobileMenuOpen(false); }} className="block w-full text-left py-2 text-gray-700">Tentang Kami</button>
             <button onClick={() => { navigateToContact(); setIsMobileMenuOpen(false); }} className="block w-full text-left py-2 text-gray-700">Kontak</button>
             <button onClick={() => { navigateToTrackOrder(); setIsMobileMenuOpen(false); }} className="block w-full text-left py-2 text-gray-700">Lacak Pesanan</button>
+            <button onClick={() => { navigateToTerms(); setIsMobileMenuOpen(false); }} className="block w-full text-left py-2 text-gray-700">Syarat & Ketentuan</button>
+            <button onClick={() => { navigateToPrivacy(); setIsMobileMenuOpen(false); }} className="block w-full text-left py-2 text-gray-700">Kebijakan Privasi</button>
           </nav>
         )}
       </div>
@@ -335,6 +405,8 @@ function App() {
               <li><button onClick={navigateToBlog} className="hover:text-[#FF6B9D] transition-colors">Blog</button></li>
               <li><button onClick={navigateToAbout} className="hover:text-[#FF6B9D] transition-colors">Tentang Kami</button></li>
               <li><button onClick={navigateToTrackOrder} className="hover:text-[#FF6B9D] transition-colors">Lacak Pesanan</button></li>
+              <li><button onClick={navigateToTerms} className="hover:text-[#FF6B9D] transition-colors">Syarat & Ketentuan</button></li>
+              <li><button onClick={navigateToPrivacy} className="hover:text-[#FF6B9D] transition-colors">Kebijakan Privasi</button></li>
             </ul>
           </div>
 
@@ -721,6 +793,65 @@ function App() {
     );
   };
 
+  // Render Instagram Section (simple embed style for Phase 1)
+  const renderInstagramSection = () => {
+    const instagramPhotos = [
+      '/images/blog/birthday-cake-tips.jpg',
+      '/images/blog/brownies-recipe.jpg',
+      '/images/blog/journey-20-years.jpg',
+      '/images/blog/lapis-legit-history.jpg',
+      '/images/blog/promo-februari.jpg',
+      '/images/blog/simpan-kue-kering.jpg'
+    ];
+
+    return (
+      <section className="py-16 bg-white">
+        <div className="container mx-auto px-4">
+          <div className="text-center mb-10">
+            <h2 className="font-display text-3xl md:text-4xl font-bold text-gray-900 mb-3">
+              Dari Instagram Kami
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Inspirasi kue terbaru, promo, dan proses pembuatan kue homemade.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-8">
+            {instagramPhotos.map((photo, index) => (
+              <a
+                key={photo}
+                href={`https://instagram.com/${siteSettings.instagram}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block overflow-hidden rounded-xl group"
+                aria-label={`Lihat foto Instagram ${index + 1}`}
+              >
+                <img
+                  src={photo}
+                  alt={`Feed Instagram ${index + 1} Toko Kue Bu Siti`}
+                  className="w-full h-40 md:h-56 object-cover transition-transform duration-500 group-hover:scale-105"
+                  loading="lazy"
+                />
+              </a>
+            ))}
+          </div>
+
+          <div className="text-center">
+            <a
+              href={`https://instagram.com/${siteSettings.instagram}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-secondary inline-flex items-center gap-2"
+            >
+              <Instagram className="w-4 h-4" />
+              Kunjungi Instagram
+            </a>
+          </div>
+        </div>
+      </section>
+    );
+  };
+
   // Render Home Page
   const renderHome = () => (
     <div className="animate-fadeIn">
@@ -729,6 +860,7 @@ function App() {
       {renderFeaturedProducts()}
       {renderAboutSection()}
       {renderBlogSection()}
+      {renderInstagramSection()}
     </div>
   );
 
@@ -760,7 +892,14 @@ function App() {
             logout();
             setView('home');
           }}
-          onUpdateOrderStatus={updateOrderStatus}
+          onUpdateOrderStatus={async (orderId, status, notes) => {
+            try {
+              const updatedOrder = await updateOrderStatusApi(orderId, status, notes);
+              upsertOrder(updatedOrder);
+            } catch {
+              updateOrderStatus(orderId, status, notes);
+            }
+          }}
         />
       )}
 
@@ -822,6 +961,10 @@ function App() {
             {view === 'about' && <AboutView />}
 
             {view === 'contact' && <ContactView />}
+
+            {view === 'terms' && <TermsView />}
+
+            {view === 'privacy' && <PrivacyView />}
           </main>
 
           {renderFooter()}

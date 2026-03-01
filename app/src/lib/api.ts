@@ -1,4 +1,4 @@
-import type { Order } from '@/types';
+import type { BlogPost, Order, Product, SiteSettings } from '@/types';
 
 interface ApiSuccessResponse<T> {
   success: true;
@@ -63,6 +63,17 @@ export const createOrderApi = async (order: Order): Promise<Order> => {
   });
 };
 
+export const updateOrderStatusApi = async (
+  orderId: string,
+  status: Order['status'],
+  notes?: string
+): Promise<Order> => {
+  return requestJson<Order>(`/api/orders/${encodeURIComponent(orderId)}/status`, {
+    method: 'PATCH',
+    body: JSON.stringify({ status, notes })
+  });
+};
+
 export const trackOrderApi = async (orderNumber: string, email: string): Promise<Order | null> => {
   const query = new URLSearchParams({ orderNumber, email }).toString();
   try {
@@ -86,5 +97,85 @@ export const uploadPaymentProofApi = async (orderId: string, file: File): Promis
 
   return requestFormData<UploadedPaymentProof>(`/api/orders/${encodeURIComponent(orderId)}/payment-proof`, formData, {
     method: 'POST'
+  });
+};
+
+export const fetchAdminProductsApi = async (): Promise<Product[]> => {
+  return requestJson<Product[]>('/api/products');
+};
+
+export const createAdminProductApi = async (product: Partial<Product>): Promise<{ id: string }> => {
+  return requestJson<{ id: string }>('/api/products', {
+    method: 'POST',
+    body: JSON.stringify({ product })
+  });
+};
+
+export const updateAdminProductApi = async (productId: string, product: Partial<Product>): Promise<{ id: string }> => {
+  return requestJson<{ id: string }>(`/api/products/${encodeURIComponent(productId)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ product })
+  });
+};
+
+export const deleteAdminProductApi = async (productId: string): Promise<{ id: string }> => {
+  return requestJson<{ id: string }>(`/api/products/${encodeURIComponent(productId)}`, {
+    method: 'DELETE'
+  });
+};
+
+export const fetchAdminBlogPostsApi = async (): Promise<BlogPost[]> => {
+  return requestJson<BlogPost[]>('/api/blog/posts');
+};
+
+export const createAdminBlogPostApi = async (post: Partial<BlogPost>): Promise<{ id: string }> => {
+  return requestJson<{ id: string }>('/api/blog/posts', {
+    method: 'POST',
+    body: JSON.stringify({ post })
+  });
+};
+
+export const updateAdminBlogPostApi = async (postId: string, post: Partial<BlogPost>): Promise<{ id: string }> => {
+  return requestJson<{ id: string }>(`/api/blog/posts/${encodeURIComponent(postId)}`, {
+    method: 'PUT',
+    body: JSON.stringify({ post })
+  });
+};
+
+export const deleteAdminBlogPostApi = async (postId: string): Promise<{ id: string }> => {
+  return requestJson<{ id: string }>(`/api/blog/posts/${encodeURIComponent(postId)}`, {
+    method: 'DELETE'
+  });
+};
+
+export interface ApiSiteSettings extends Record<string, unknown> {
+  bankAccounts: Array<{
+    id?: string;
+    bankName: string;
+    accountNumber: string;
+    accountHolder: string;
+  }>;
+}
+
+export const getSiteSettingsApi = async (): Promise<ApiSiteSettings> => {
+  return requestJson<ApiSiteSettings>('/api/settings');
+};
+
+export const updateSiteSettingsApi = async (settings: Partial<SiteSettings> & Record<string, unknown>): Promise<ApiSiteSettings> => {
+  return requestJson<ApiSiteSettings>('/api/settings', {
+    method: 'PUT',
+    body: JSON.stringify({ settings })
+  });
+};
+
+export const sendTestNotificationApi = async (
+  channel: 'whatsapp' | 'email',
+  target: string,
+  message: string,
+  subject?: string
+): Promise<{ channel: string; target: string }> => {
+  return requestJson<{ channel: string; target: string }>('/api/notifications/test', {
+    method: 'POST',
+    body: JSON.stringify({ channel, target, message, subject })
   });
 };

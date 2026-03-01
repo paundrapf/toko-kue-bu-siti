@@ -5,6 +5,12 @@ workers_dev = true
 
 [vars]
 APP_ENV = "development"
+APP_BASE_URL = "https://tokokuebusiti.com"
+# FONNTE_API_KEY = ""
+# RESEND_API_KEY = ""
+# RESEND_FROM_EMAIL = "noreply@tokokuebusiti.com"
+# ADMIN_NOTIFICATION_PHONE = "6281234567890"
+# ADMIN_NOTIFICATION_EMAIL = "hello@tokokuebusiti.com"
 
 [[d1_databases]]
 binding = "DB"

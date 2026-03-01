@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { 
   LayoutDashboard, Package, ShoppingCart, 
-  LogOut, TrendingUp, DollarSign, 
-  Clock, Search, Eye
+  LogOut, TrendingUp, DollarSign,
+  Clock, Search, Eye, Plus, Trash2, RefreshCw,
+  FileText, Settings, Save, Send
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -11,7 +12,20 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import type { Order, Product } from '@/types';
+import {
+  createAdminBlogPostApi,
+  createAdminProductApi,
+  deleteAdminBlogPostApi,
+  deleteAdminProductApi,
+  fetchAdminBlogPostsApi,
+  fetchAdminProductsApi,
+  getSiteSettingsApi,
+  sendTestNotificationApi,
+  updateAdminProductApi,
+  updateSiteSettingsApi
+} from '@/lib/api';
+import type { ApiSiteSettings } from '@/lib/api';
+import type { BlogPost, Order, Product } from '@/types';
 
 interface AdminViewProps {
   orders: Order[];
@@ -27,7 +41,7 @@ interface AdminViewProps {
     recentOrders: Order[];
   };
   onLogout: () => void;
-  onUpdateOrderStatus: (orderId: string, status: Order['status'], notes?: string) => void;
+  onUpdateOrderStatus: (orderId: string, status: Order['status'], notes?: string) => Promise<void> | void;
 }
 
 const formatPrice = (price: number) => {
@@ -60,6 +74,186 @@ export function AdminView({ orders, products, analytics, onLogout, onUpdateOrder
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [orderFilter, setOrderFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [managedProducts, setManagedProducts] = useState<Product[]>(products);
+  const [managedBlogPosts, setManagedBlogPosts] = useState<BlogPost[]>([]);
+  const [settingsDraft, setSettingsDraft] = useState<ApiSiteSettings | null>(null);
+  const [isSyncingProducts, setIsSyncingProducts] = useState(false);
+  const [isSyncingBlog, setIsSyncingBlog] = useState(false);
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [notificationChannel, setNotificationChannel] = useState<'whatsapp' | 'email'>('whatsapp');
+  const [notificationTarget, setNotificationTarget] = useState('');
+  const [notificationMessage, setNotificationMessage] = useState('Ini adalah pesan test notifikasi dari admin panel.');
+
+  useEffect(() => {
+    setManagedProducts(products);
+  }, [products]);
+
+  useEffect(() => {
+    if (activeTab === 'blog' && managedBlogPosts.length === 0) {
+      void syncBlogFromApi();
+    }
+    if (activeTab === 'settings' && !settingsDraft) {
+      void loadSettings();
+    }
+  }, [activeTab]);
+
+  const syncProductsFromApi = async () => {
+    setIsSyncingProducts(true);
+    try {
+      const apiProducts = await fetchAdminProductsApi();
+      if (apiProducts.length > 0) {
+        setManagedProducts(apiProducts);
+        toast.success('Data produk berhasil disinkronkan dari API');
+      } else {
+        toast.info('API produk belum memiliki data, menampilkan data lokal');
+      }
+    } catch {
+      toast.error('Gagal sinkron produk dari API');
+    } finally {
+      setIsSyncingProducts(false);
+    }
+  };
+
+  const createSampleProduct = async () => {
+    try {
+      const now = Date.now();
+      await createAdminProductApi({
+        name: `Produk Contoh ${now}`,
+        slug: `produk-contoh-${now}`,
+        description: 'Produk contoh dari admin panel',
+        shortDescription: 'Produk contoh',
+        category: managedProducts[0]?.category || 'cat-default',
+        status: 'Available',
+        featured: false,
+        images: ['/images/products/brownies-cokelat-1.jpg'],
+        variants: [
+          {
+            id: `variant-${now}`,
+            name: 'Original',
+            size: 'Medium',
+            price: 85000,
+            stock: 10
+          }
+        ]
+      });
+      toast.success('Produk contoh berhasil ditambahkan');
+      await syncProductsFromApi();
+    } catch {
+      toast.error('Gagal menambahkan produk contoh');
+    }
+  };
+
+  const toggleFeatured = async (product: Product) => {
+    try {
+      await updateAdminProductApi(product.id, { featured: !product.featured });
+      setManagedProducts(prev =>
+        prev.map(item => (item.id === product.id ? { ...item, featured: !item.featured } : item))
+      );
+      toast.success('Featured produk berhasil diperbarui');
+    } catch {
+      toast.error('Gagal mengubah status featured');
+    }
+  };
+
+  const deleteProduct = async (product: Product) => {
+    try {
+      await deleteAdminProductApi(product.id);
+      setManagedProducts(prev => prev.filter(item => item.id !== product.id));
+      toast.success('Produk berhasil dihapus');
+    } catch {
+      toast.error('Gagal menghapus produk');
+    }
+  };
+
+  const syncBlogFromApi = async () => {
+    setIsSyncingBlog(true);
+    try {
+      const posts = await fetchAdminBlogPostsApi();
+      setManagedBlogPosts(posts);
+      toast.success('Data blog berhasil disinkronkan dari API');
+    } catch {
+      toast.error('Gagal sinkron blog dari API');
+    } finally {
+      setIsSyncingBlog(false);
+    }
+  };
+
+  const createSampleBlogPost = async () => {
+    try {
+      const now = Date.now();
+      await createAdminBlogPostApi({
+        title: `Artikel Contoh ${now}`,
+        slug: `artikel-contoh-${now}`,
+        excerpt: 'Artikel contoh dari admin panel',
+        content: '<p>Konten artikel contoh.</p>',
+        category: managedBlogPosts[0]?.category || 'blog-default',
+        featuredImage: '/images/blog/brownies-recipe.jpg',
+        tags: ['contoh', 'admin'],
+        status: 'Draft',
+        featured: false
+      });
+      toast.success('Artikel contoh berhasil ditambahkan');
+      await syncBlogFromApi();
+    } catch {
+      toast.error('Gagal menambahkan artikel contoh');
+    }
+  };
+
+  const deleteBlogPost = async (post: BlogPost) => {
+    try {
+      await deleteAdminBlogPostApi(post.id);
+      setManagedBlogPosts(prev => prev.filter(item => item.id !== post.id));
+      toast.success('Artikel berhasil dihapus');
+    } catch {
+      toast.error('Gagal menghapus artikel');
+    }
+  };
+
+  const loadSettings = async () => {
+    try {
+      const settings = await getSiteSettingsApi();
+      setSettingsDraft(settings);
+      toast.success('Pengaturan berhasil dimuat');
+    } catch {
+      toast.error('Gagal memuat pengaturan');
+    }
+  };
+
+  const saveSettings = async () => {
+    if (!settingsDraft) {
+      return;
+    }
+
+    setIsSavingSettings(true);
+    try {
+      const updated = await updateSiteSettingsApi(settingsDraft);
+      setSettingsDraft(updated);
+      toast.success('Pengaturan berhasil disimpan');
+    } catch {
+      toast.error('Gagal menyimpan pengaturan');
+    } finally {
+      setIsSavingSettings(false);
+    }
+  };
+
+  const sendNotificationTest = async () => {
+    if (!notificationTarget.trim()) {
+      toast.error('Target notifikasi wajib diisi');
+      return;
+    }
+
+    try {
+      await sendTestNotificationApi(
+        notificationChannel,
+        notificationTarget,
+        notificationMessage,
+        'Test Notifikasi Admin'
+      );
+      toast.success('Test notifikasi berhasil dikirim');
+    } catch {
+      toast.error('Gagal mengirim test notifikasi');
+    }
+  };
 
   const filteredOrders = orders.filter(order => {
     const matchesFilter = orderFilter === 'all' || order.status === orderFilter;
@@ -70,8 +264,8 @@ export function AdminView({ orders, products, analytics, onLogout, onUpdateOrder
     return matchesFilter && matchesSearch;
   });
 
-  const handleStatusUpdate = (orderId: string, newStatus: Order['status']) => {
-    onUpdateOrderStatus(orderId, newStatus);
+  const handleStatusUpdate = async (orderId: string, newStatus: Order['status']) => {
+    await onUpdateOrderStatus(orderId, newStatus);
     toast.success(`Status pesanan diperbarui menjadi ${newStatus}`);
     setSelectedOrder(null);
   };
@@ -125,7 +319,7 @@ export function AdminView({ orders, products, analytics, onLogout, onUpdateOrder
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-500">Total Produk</p>
-                <p className="text-3xl font-bold">{products.length}</p>
+                <p className="text-3xl font-bold">{managedProducts.length}</p>
               </div>
               <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center">
                 <Package className="w-6 h-6 text-purple-600" />
@@ -133,7 +327,7 @@ export function AdminView({ orders, products, analytics, onLogout, onUpdateOrder
             </div>
             <div className="mt-4 flex items-center text-sm">
               <span className="text-gray-500">
-                {products.filter(p => p.status === 'Available').length} tersedia
+                {managedProducts.filter(p => p.status === 'Available').length} tersedia
               </span>
             </div>
           </CardContent>
@@ -343,6 +537,14 @@ export function AdminView({ orders, products, analytics, onLogout, onUpdateOrder
               <Package className="w-4 h-4 mr-2" />
               Produk
             </TabsTrigger>
+            <TabsTrigger value="blog">
+              <FileText className="w-4 h-4 mr-2" />
+              Blog
+            </TabsTrigger>
+            <TabsTrigger value="settings">
+              <Settings className="w-4 h-4 mr-2" />
+              Pengaturan
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="dashboard">
@@ -356,7 +558,19 @@ export function AdminView({ orders, products, analytics, onLogout, onUpdateOrder
           <TabsContent value="products">
             <Card>
               <CardHeader>
-                <CardTitle>Daftar Produk</CardTitle>
+                <div className="flex flex-col md:flex-row justify-between gap-3">
+                  <CardTitle>Daftar Produk</CardTitle>
+                  <div className="flex flex-wrap gap-2">
+                    <Button variant="outline" onClick={syncProductsFromApi} disabled={isSyncingProducts}>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      {isSyncingProducts ? 'Sinkron...' : 'Sinkronkan API'}
+                    </Button>
+                    <Button onClick={createSampleProduct} className="bg-[#FF6B9D] hover:bg-[#E85A8A]">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Contoh
+                    </Button>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="overflow-x-auto">
@@ -369,15 +583,16 @@ export function AdminView({ orders, products, analytics, onLogout, onUpdateOrder
                         <th className="text-left py-3 px-4">Stok</th>
                         <th className="text-left py-3 px-4">Terjual</th>
                         <th className="text-left py-3 px-4">Status</th>
+                        <th className="text-left py-3 px-4">Aksi</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {products.map((product) => (
+                      {managedProducts.map((product) => (
                         <tr key={product.id} className="border-b hover:bg-gray-50">
                           <td className="py-3 px-4">
                             <div className="flex items-center gap-3">
                               <img
-                                src={product.images[0]}
+                                src={product.images?.[0] || '/images/products/brownies-cokelat-1.jpg'}
                                 alt={product.name}
                                 className="w-12 h-12 rounded-lg object-cover"
                               />
@@ -395,10 +610,189 @@ export function AdminView({ orders, products, analytics, onLogout, onUpdateOrder
                               {product.status === 'Available' ? 'Tersedia' : 'Habis'}
                             </Badge>
                           </td>
+                          <td className="py-3 px-4">
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => toggleFeatured(product)}>
+                                {product.featured ? 'Unfeature' : 'Feature'}
+                              </Button>
+                              <Button size="sm" variant="destructive" onClick={() => deleteProduct(product)}>
+                                <Trash2 className="w-4 h-4" />
+                              </Button>
+                            </div>
+                          </td>
                         </tr>
                       ))}
+                      {managedProducts.length === 0 && (
+                        <tr>
+                          <td colSpan={7} className="py-6 text-center text-gray-500">
+                            Belum ada data produk. Klik "Sinkronkan API" atau "Tambah Contoh".
+                          </td>
+                        </tr>
+                      )}
                     </tbody>
                   </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="blog">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col md:flex-row justify-between gap-3">
+                  <CardTitle>Manajemen Blog</CardTitle>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={syncBlogFromApi} disabled={isSyncingBlog}>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      {isSyncingBlog ? 'Sinkron...' : 'Sinkronkan API'}
+                    </Button>
+                    <Button onClick={createSampleBlogPost} className="bg-[#FF6B9D] hover:bg-[#E85A8A]">
+                      <Plus className="w-4 h-4 mr-2" />
+                      Tambah Artikel
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-4">Judul</th>
+                        <th className="text-left py-3 px-4">Kategori</th>
+                        <th className="text-left py-3 px-4">Status</th>
+                        <th className="text-left py-3 px-4">Views</th>
+                        <th className="text-left py-3 px-4">Aksi</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {managedBlogPosts.map((post) => (
+                        <tr key={post.id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">{post.title}</td>
+                          <td className="py-3 px-4">{post.categoryName}</td>
+                          <td className="py-3 px-4">{post.status}</td>
+                          <td className="py-3 px-4">{post.views}</td>
+                          <td className="py-3 px-4">
+                            <Button size="sm" variant="destructive" onClick={() => deleteBlogPost(post)}>
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                      {managedBlogPosts.length === 0 && (
+                        <tr>
+                          <td colSpan={5} className="py-6 text-center text-gray-500">
+                            Belum ada data blog. Klik "Sinkronkan API" atau "Tambah Artikel".
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="settings">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-col md:flex-row justify-between gap-3">
+                  <CardTitle>Pengaturan Situs</CardTitle>
+                  <div className="flex gap-2">
+                    <Button variant="outline" onClick={loadSettings}>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Muat dari API
+                    </Button>
+                    <Button
+                      onClick={saveSettings}
+                      disabled={!settingsDraft || isSavingSettings}
+                      className="bg-[#FF6B9D] hover:bg-[#E85A8A]"
+                    >
+                      <Save className="w-4 h-4 mr-2" />
+                      {isSavingSettings ? 'Menyimpan...' : 'Simpan'}
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {!settingsDraft && (
+                  <p className="text-sm text-gray-500">Klik "Muat dari API" untuk menampilkan data pengaturan.</p>
+                )}
+
+                {settingsDraft && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">Nama Situs</label>
+                      <Input
+                        value={String(settingsDraft.site_name || '')}
+                        onChange={(e) => setSettingsDraft({ ...settingsDraft, site_name: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">Tagline</label>
+                      <Input
+                        value={String(settingsDraft.tagline || '')}
+                        onChange={(e) => setSettingsDraft({ ...settingsDraft, tagline: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">Email</label>
+                      <Input
+                        value={String(settingsDraft.email || '')}
+                        onChange={(e) => setSettingsDraft({ ...settingsDraft, email: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">Telepon</label>
+                      <Input
+                        value={String(settingsDraft.phone || '')}
+                        onChange={(e) => setSettingsDraft({ ...settingsDraft, phone: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">Instagram URL</label>
+                      <Input
+                        value={String(settingsDraft.instagram_url || '')}
+                        onChange={(e) => setSettingsDraft({ ...settingsDraft, instagram_url: e.target.value })}
+                      />
+                    </div>
+                    <div>
+                      <label className="text-sm text-gray-600 mb-1 block">Ongkir Default</label>
+                      <Input
+                        type="number"
+                        value={String(settingsDraft.shipping_cost || 0)}
+                        onChange={(e) => setSettingsDraft({ ...settingsDraft, shipping_cost: Number(e.target.value) })}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                <div className="pt-2 border-t">
+                  <h4 className="font-semibold mb-3">Test Notifikasi</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-[160px_1fr_1fr_auto] gap-3">
+                    <select
+                      value={notificationChannel}
+                      onChange={(e) => setNotificationChannel(e.target.value as 'whatsapp' | 'email')}
+                      className="border rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="whatsapp">WhatsApp</option>
+                      <option value="email">Email</option>
+                    </select>
+                    <Input
+                      placeholder={notificationChannel === 'whatsapp' ? 'Contoh: 62812xxxx' : 'email@domain.com'}
+                      value={notificationTarget}
+                      onChange={(e) => setNotificationTarget(e.target.value)}
+                    />
+                    <Input
+                      placeholder="Pesan test"
+                      value={notificationMessage}
+                      onChange={(e) => setNotificationMessage(e.target.value)}
+                    />
+                    <Button onClick={sendNotificationTest}>
+                      <Send className="w-4 h-4 mr-2" />
+                      Kirim Test
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>

@@ -175,5 +175,7 @@ export type ViewState =
   | 'blog-detail' 
   | 'about' 
   | 'contact' 
+  | 'terms'
+  | 'privacy'
   | 'admin' 
   | 'admin-login';
