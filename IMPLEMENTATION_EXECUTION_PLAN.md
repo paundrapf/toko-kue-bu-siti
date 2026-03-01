@@ -98,6 +98,7 @@ Output file: `docs/scope-boundary-and-change-control.md`
 - Task 5.3 completed: QA/release/handover package documented in `docs/phase-5-qa-release-handover.md`.
 
 ## Post-Phase Ongoing Hardening
-- Add CI workflow for app and worker quality gates.
-- Add manual Cloudflare deploy workflow for release operations.
-- Document CI/CD secrets, preconditions, and rollback runbook.
+- CI workflow added for app and worker quality gates (`.github/workflows/ci.yml`).
+- Manual Cloudflare deploy workflow added for release operations (`.github/workflows/deploy-cloudflare.yml`).
+- CI/CD secrets, preconditions, and rollback runbook documented in `docs/cloudflare-cicd-runbook.md`.
+- Post-deploy smoke test script added at `scripts/smoke-check.mjs` and wired to deploy workflow when `SMOKE_BASE_URL` is configured.

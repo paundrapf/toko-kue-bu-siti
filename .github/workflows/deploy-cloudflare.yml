@@ -60,6 +60,10 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       CLOUDFLARE_PAGES_PROJECT_NAME: ${{ secrets.CLOUDFLARE_PAGES_PROJECT_NAME }}
+      SMOKE_BASE_URL: ${{ secrets.SMOKE_BASE_URL }}
+      SMOKE_ORDER_NUMBER: ${{ secrets.SMOKE_ORDER_NUMBER }}
+      SMOKE_ORDER_EMAIL: ${{ secrets.SMOKE_ORDER_EMAIL }}
+      SMOKE_TIMEOUT_MS: "20000"
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -82,3 +86,7 @@ jobs:
 
       - name: Deploy to Cloudflare Pages
         run: npx wrangler pages deploy dist --project-name "$CLOUDFLARE_PAGES_PROJECT_NAME" --branch main
+
+      - name: Run post-deploy smoke checks
+        if: env.SMOKE_BASE_URL != ''
+        run: node ../scripts/smoke-check.mjs

@@ -1,5 +1,8 @@
 # Toko Kue Bu Siti
 
+[![CI](https://github.com/paundrapf/toko-kue-bu-siti/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/paundrapf/toko-kue-bu-siti/actions/workflows/ci.yml)
+[![Deploy Cloudflare](https://github.com/paundrapf/toko-kue-bu-siti/actions/workflows/deploy-cloudflare.yml/badge.svg)](https://github.com/paundrapf/toko-kue-bu-siti/actions/workflows/deploy-cloudflare.yml)
+
 Repository for the Toko Kue Bu Siti ecommerce project.
 
 ## Current Structure
@@ -26,3 +29,4 @@ The implementation is being migrated toward a Cloudflare full-stack architecture
 ## Automation
 - `.github/workflows/ci.yml` runs tests/build and Lighthouse checks.
 - `.github/workflows/deploy-cloudflare.yml` handles manual Cloudflare deployment.
+- `scripts/smoke-check.mjs` provides post-deploy smoke checks for core API routes.
