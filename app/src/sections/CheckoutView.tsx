@@ -14,7 +14,7 @@ import type { Cart, CustomerInfo, Order } from '@/types';
 interface CheckoutViewProps {
   cart: Cart;
   onBack: () => void;
-  onOrderComplete: (order: Order) => void;
+  onOrderComplete: (order: Order) => Promise<Order> | Order;
 }
 
 const formatPrice = (price: number) => {
@@ -67,14 +67,14 @@ export function CheckoutView({ cart, onBack, onOrderComplete }: CheckoutViewProp
     setStep('payment');
   };
 
-  const handlePaymentSubmit = () => {
+  const handlePaymentSubmit = async () => {
     // Create order
     const newOrder: Order = {
       id: `order-${Date.now()}`,
       orderNumber: `TK-${new Date().toISOString().slice(0, 10).replace(/-/g, '')}-${Math.floor(Math.random() * 900) + 100}`,
       customer: customerInfo,
       items: cart.items.map(item => ({
-        id: `item-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`,
         productId: item.product.id,
         productName: item.product.name,
         variantName: item.variant.name,
@@ -104,9 +104,9 @@ export function CheckoutView({ cart, onBack, onOrderComplete }: CheckoutViewProp
       updatedAt: new Date().toISOString()
     };
 
-    setCreatedOrder(newOrder);
+    const persistedOrder = await onOrderComplete(newOrder);
+    setCreatedOrder(persistedOrder);
     setShowSuccessDialog(true);
-    onOrderComplete(newOrder);
   };
 
   const copyToClipboard = (text: string, type: string) => {

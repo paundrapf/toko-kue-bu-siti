@@ -195,6 +195,29 @@ export const useOrdersStore = () => {
     return orders.find(o => o.orderNumber === orderNumber);
   }, [orders]);
 
+  const getOrderByNumberAndEmail = useCallback((orderNumber: string, email: string): Order | undefined => {
+    const normalizedOrderNumber = orderNumber.trim().toUpperCase();
+    const normalizedEmail = email.trim().toLowerCase();
+    return orders.find(o =>
+      o.orderNumber.toUpperCase() === normalizedOrderNumber &&
+      o.customer.email.trim().toLowerCase() === normalizedEmail
+    );
+  }, [orders]);
+
+  const upsertOrder = useCallback((order: Order) => {
+    setOrders(prev => {
+      const existingIndex = prev.findIndex(
+        o => o.id === order.id || o.orderNumber === order.orderNumber
+      );
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = order;
+        return updated;
+      }
+      return [order, ...prev];
+    });
+  }, []);
+
   const updateOrderStatus = useCallback((orderId: string, status: Order['status'], notes?: string) => {
     setOrders(prev => prev.map(order => {
       if (order.id === orderId) {
@@ -251,6 +274,8 @@ export const useOrdersStore = () => {
     orders,
     createOrder,
     getOrderByNumber,
+    getOrderByNumberAndEmail,
+    upsertOrder,
     updateOrderStatus,
     uploadPaymentProof,
     confirmPayment

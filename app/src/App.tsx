@@ -29,6 +29,7 @@ import {
 import { 
   useCartStore, useOrdersStore, useAdminStore, useAnalyticsStore 
 } from '@/hooks/useStore';
+import { createOrderApi, trackOrderApi, uploadPaymentProofApi } from '@/lib/api';
 import type { 
   ViewState, Product, BlogPost, Order
 } from '@/types';
@@ -63,7 +64,13 @@ function App() {
   const [currentHeroSlide, setCurrentHeroSlide] = useState(0);
 
   const { cart, addToCart, updateQuantity, removeFromCart, clearCart } = useCartStore();
-  const { orders, getOrderByNumber, updateOrderStatus } = useOrdersStore();
+  const {
+    orders,
+    getOrderByNumberAndEmail,
+    updateOrderStatus,
+    upsertOrder,
+    uploadPaymentProof
+  } = useOrdersStore();
   const { isAuthenticated, login, logout } = useAdminStore();
   const analytics = useAnalyticsStore(orders);
 
@@ -147,12 +154,53 @@ function App() {
     window.scrollTo(0, 0);
   };
 
-  const handleOrderComplete = (order: Order) => {
+  const handleOrderComplete = async (order: Order): Promise<Order> => {
+    let persistedOrder = order;
+    try {
+      persistedOrder = await createOrderApi(order);
+      upsertOrder(persistedOrder);
+      toast.success('Pesanan berhasil disimpan ke server');
+    } catch {
+      upsertOrder(order);
+      toast.error('Gagal sinkron ke server. Pesanan disimpan lokal.');
+    }
+
     clearCart();
     // Send WhatsApp notification
-    const message = `Halo ${siteSettings.siteName}, saya telah melakukan pemesanan dengan nomor ${order.orderNumber}. Mohon konfirmasinya. Terima kasih!`;
+    const message = `Halo ${siteSettings.siteName}, saya telah melakukan pemesanan dengan nomor ${persistedOrder.orderNumber}. Mohon konfirmasinya. Terima kasih!`;
     const whatsappUrl = `https://wa.me/${siteSettings.whatsapp}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
+    return persistedOrder;
+  };
+
+  const handleTrackOrder = async (orderNumber: string, email: string): Promise<Order | null> => {
+    const apiOrder = await trackOrderApi(orderNumber, email);
+    if (apiOrder) {
+      upsertOrder(apiOrder);
+      return apiOrder;
+    }
+
+    const localOrder = getOrderByNumberAndEmail(orderNumber, email);
+    return localOrder || null;
+  };
+
+  const handleUploadPaymentProof = async (currentOrder: Order, file: File): Promise<Order> => {
+    const uploaded = await uploadPaymentProofApi(currentOrder.id, file);
+    uploadPaymentProof(currentOrder.id, uploaded.viewUrl);
+
+    const refreshedOrder = await trackOrderApi(currentOrder.orderNumber, currentOrder.customer.email);
+    if (refreshedOrder) {
+      upsertOrder(refreshedOrder);
+      return refreshedOrder;
+    }
+
+    const updatedOrder = {
+      ...currentOrder,
+      paymentProof: uploaded.viewUrl,
+      updatedAt: new Date().toISOString()
+    };
+    upsertOrder(updatedOrder);
+    return updatedOrder;
   };
 
 
@@ -753,7 +801,10 @@ function App() {
             )}
 
             {view === 'track-order' && (
-              <OrderTrackingView getOrderByNumber={getOrderByNumber} />
+              <OrderTrackingView
+                onTrackOrder={handleTrackOrder}
+                onUploadPaymentProof={handleUploadPaymentProof}
+              />
             )}
 
             {view === 'blog' && (

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Package, Clock, CheckCircle, Truck, Home, X, Copy, Check, Calendar, Phone, MapPin, User } from 'lucide-react';
+import { Search, Package, Clock, CheckCircle, Truck, Home, X, Copy, Check, Calendar, Phone, MapPin, User, Mail, Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -8,7 +8,8 @@ import { toast } from 'sonner';
 import type { Order } from '@/types';
 
 interface OrderTrackingViewProps {
-  getOrderByNumber: (orderNumber: string) => Order | undefined;
+  onTrackOrder: (orderNumber: string, email: string) => Promise<Order | null>;
+  onUploadPaymentProof: (order: Order, file: File) => Promise<Order>;
 }
 
 const formatPrice = (price: number) => {
@@ -69,24 +70,69 @@ const statusConfig: Record<string, { icon: any; color: string; label: string; de
 };
 
 const statusFlow = ['Pending', 'Confirmed', 'Baking', 'Ready', 'Delivered'];
+const MAX_PAYMENT_PROOF_SIZE = 5 * 1024 * 1024;
 
-export function OrderTrackingView({ getOrderByNumber }: OrderTrackingViewProps) {
+export function OrderTrackingView({ onTrackOrder, onUploadPaymentProof }: OrderTrackingViewProps) {
   const [orderNumber, setOrderNumber] = useState('');
+  const [email, setEmail] = useState('');
   const [order, setOrder] = useState<Order | null>(null);
   const [searched, setSearched] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isSearching, setIsSearching] = useState(false);
+  const [paymentProofFile, setPaymentProofFile] = useState<File | null>(null);
+  const [isUploadingProof, setIsUploadingProof] = useState(false);
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!orderNumber.trim()) {
       toast.error('Masukkan nomor pesanan');
       return;
     }
-    const found = getOrderByNumber(orderNumber.trim().toUpperCase());
+    if (!email.trim()) {
+      toast.error('Masukkan email yang digunakan saat checkout');
+      return;
+    }
+
+    setIsSearching(true);
+    const found = await onTrackOrder(orderNumber.trim().toUpperCase(), email.trim());
     setOrder(found || null);
     setSearched(true);
+    setIsSearching(false);
+
     if (!found) {
       toast.error('Pesanan tidak ditemukan');
+    }
+  };
+
+  const handlePaymentProofUpload = async () => {
+    if (!order) {
+      return;
+    }
+    if (!paymentProofFile) {
+      toast.error('Pilih file bukti pembayaran terlebih dahulu');
+      return;
+    }
+
+    if (!paymentProofFile.type.startsWith('image/')) {
+      toast.error('File harus berupa gambar (JPG/PNG/WebP)');
+      return;
+    }
+
+    if (paymentProofFile.size > MAX_PAYMENT_PROOF_SIZE) {
+      toast.error('Ukuran file maksimal 5MB');
+      return;
+    }
+
+    setIsUploadingProof(true);
+    try {
+      const updatedOrder = await onUploadPaymentProof(order, paymentProofFile);
+      setOrder(updatedOrder);
+      setPaymentProofFile(null);
+      toast.success('Bukti pembayaran berhasil diupload');
+    } catch {
+      toast.error('Gagal upload bukti pembayaran');
+    } finally {
+      setIsUploadingProof(false);
     }
   };
 
@@ -109,15 +155,15 @@ export function OrderTrackingView({ getOrderByNumber }: OrderTrackingViewProps) 
             Lacak Pesanan
           </h1>
           <p className="text-gray-600">
-            Masukkan nomor pesanan Anda untuk melihat status pesanan
+            Masukkan nomor pesanan dan email checkout untuk melihat status pesanan
           </p>
         </div>
 
         {/* Search Form */}
         <Card className="mb-8">
           <CardContent className="p-6">
-            <form onSubmit={handleSearch} className="flex gap-4">
-              <div className="flex-1 relative">
+            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4">
+              <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
                 <Input
                   type="text"
@@ -127,8 +173,18 @@ export function OrderTrackingView({ getOrderByNumber }: OrderTrackingViewProps) 
                   className="pl-12 py-6 text-lg"
                 />
               </div>
-              <Button type="submit" className="bg-[#FF6B9D] hover:bg-[#E85A8A] px-8 py-6">
-                Cari
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                <Input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="Email saat checkout"
+                  className="pl-12 py-6 text-lg"
+                />
+              </div>
+              <Button type="submit" disabled={isSearching} className="bg-[#FF6B9D] hover:bg-[#E85A8A] px-8 py-6">
+                {isSearching ? 'Mencari...' : 'Cari'}
               </Button>
             </form>
           </CardContent>
@@ -177,8 +233,10 @@ export function OrderTrackingView({ getOrderByNumber }: OrderTrackingViewProps) 
                   <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
                   {statusFlow.map((status, idx) => {
                     const StatusIcon = statusConfig[status].icon;
-                    const isCompleted = getStatusIndex(order.status) >= idx;
-                    const isCurrent = order.status === status;
+                    const currentIndex = getStatusIndex(order.status);
+                    const isCancelled = order.status === 'Cancelled';
+                    const isCompleted = !isCancelled && currentIndex >= idx;
+                    const isCurrent = !isCancelled && order.status === status;
                     
                     return (
                       <div key={status} className={`relative flex items-start gap-4 mb-6 ${
@@ -334,6 +392,43 @@ export function OrderTrackingView({ getOrderByNumber }: OrderTrackingViewProps) 
                     </span>
                   </div>
                 </div>
+
+                {order.paymentProof && (
+                  <div className="mt-4">
+                    <p className="text-sm text-gray-600 mb-2">Bukti Pembayaran Terupload</p>
+                    <a href={order.paymentProof} target="_blank" rel="noopener noreferrer" className="inline-block">
+                      <img
+                        src={order.paymentProof}
+                        alt="Bukti pembayaran"
+                        className="w-40 h-40 object-cover rounded-lg border border-gray-200"
+                      />
+                    </a>
+                  </div>
+                )}
+
+                {order.paymentStatus !== 'Paid' && (
+                  <div className="mt-6 p-4 border border-dashed rounded-lg bg-gray-50">
+                    <p className="font-medium mb-2">Upload Bukti Pembayaran</p>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Format: JPG/PNG/WebP, maksimal 5MB.
+                    </p>
+
+                    <Input
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      onChange={(e) => setPaymentProofFile(e.target.files?.[0] || null)}
+                    />
+
+                    <Button
+                      onClick={handlePaymentProofUpload}
+                      disabled={!paymentProofFile || isUploadingProof}
+                      className="mt-3 bg-[#FF6B9D] hover:bg-[#E85A8A]"
+                    >
+                      <Upload className="w-4 h-4 mr-2" />
+                      {isUploadingProof ? 'Mengupload...' : 'Upload Bukti'}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -350,7 +445,7 @@ export function OrderTrackingView({ getOrderByNumber }: OrderTrackingViewProps) 
                 Pesanan Tidak Ditemukan
               </h3>
               <p className="text-gray-600">
-                Nomor pesanan yang Anda masukkan tidak ditemukan. Pastikan nomor pesanan sudah benar.
+                Pesanan tidak ditemukan. Pastikan nomor pesanan dan email checkout yang Anda masukkan sudah benar.
               </p>
             </CardContent>
           </Card>
