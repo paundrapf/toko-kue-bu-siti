@@ -18,3 +18,10 @@
 - `GET /api/orders`
 - `GET /api/blog/posts`
 - `GET /api/settings`
+- `POST /api/media/upload`
+- `GET /api/media/:key`
+
+## Media Upload Placeholder
+- Upload endpoint expects `multipart/form-data` with field `file`.
+- Allowed mime types: `image/jpeg`, `image/png`, `image/webp`.
+- Max file size: 5MB.

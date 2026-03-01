@@ -11,3 +11,8 @@ binding = "DB"
 database_name = "toko-kue-db"
 database_id = "REPLACE_WITH_D1_DATABASE_ID"
 migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "MEDIA_BUCKET"
+bucket_name = "toko-kue-media"
+preview_bucket_name = "toko-kue-media-preview"
