@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "d1:migrate:local": "wrangler d1 migrations apply toko-kue-db --local",
+    "d1:migrate:remote": "wrangler d1 migrations apply toko-kue-db --remote",
+    "d1:execute:local": "wrangler d1 execute toko-kue-db --local"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260215.0",
