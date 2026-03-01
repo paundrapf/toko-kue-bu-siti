@@ -2,6 +2,7 @@
 
 [![CI](https://github.com/paundrapf/toko-kue-bu-siti/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/paundrapf/toko-kue-bu-siti/actions/workflows/ci.yml)
 [![Deploy Cloudflare](https://github.com/paundrapf/toko-kue-bu-siti/actions/workflows/deploy-cloudflare.yml/badge.svg)](https://github.com/paundrapf/toko-kue-bu-siti/actions/workflows/deploy-cloudflare.yml)
+[![Smoke Check](https://github.com/paundrapf/toko-kue-bu-siti/actions/workflows/smoke-check.yml/badge.svg)](https://github.com/paundrapf/toko-kue-bu-siti/actions/workflows/smoke-check.yml)
 
 Repository for the Toko Kue Bu Siti ecommerce project.
 
@@ -29,4 +30,10 @@ The implementation is being migrated toward a Cloudflare full-stack architecture
 ## Automation
 - `.github/workflows/ci.yml` runs tests/build and Lighthouse checks.
 - `.github/workflows/deploy-cloudflare.yml` handles manual Cloudflare deployment.
+- `.github/workflows/smoke-check.yml` runs ad-hoc smoke checks against any URL.
 - `scripts/smoke-check.mjs` provides post-deploy smoke checks for core API routes.
+
+## GitHub Secrets Bootstrap
+Set these in `Settings` -> `Secrets and variables` -> `Actions`:
+- Required for deploy: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_PAGES_PROJECT_NAME`
+- Optional for auto smoke check in deploy: `SMOKE_BASE_URL`, `SMOKE_ORDER_NUMBER`, `SMOKE_ORDER_EMAIL`

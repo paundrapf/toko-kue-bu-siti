@@ -1,0 +1,43 @@
+name: Smoke Check
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: Base URL target (example https://tokokuebusiti.com)
+        required: true
+        type: string
+      order_number:
+        description: Optional known order number
+        required: false
+        type: string
+      order_email:
+        description: Optional known order email
+        required: false
+        type: string
+      timeout_ms:
+        description: Request timeout in milliseconds
+        required: false
+        default: "20000"
+        type: string
+
+jobs:
+  smoke-check:
+    name: Run Smoke Checks
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Run smoke-check script
+        env:
+          SMOKE_BASE_URL: ${{ inputs.base_url }}
+          SMOKE_ORDER_NUMBER: ${{ inputs.order_number }}
+          SMOKE_ORDER_EMAIL: ${{ inputs.order_email }}
+          SMOKE_TIMEOUT_MS: ${{ inputs.timeout_ms }}
+        run: node scripts/smoke-check.mjs

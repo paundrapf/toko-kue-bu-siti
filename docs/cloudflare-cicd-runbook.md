@@ -24,6 +24,14 @@ Execution order:
 2. Deploy frontend to Cloudflare Pages.
 3. Run optional post-deploy smoke checks when `SMOKE_BASE_URL` secret is configured.
 
+### `Smoke Check` (`.github/workflows/smoke-check.yml`)
+Trigger:
+- Manual (`workflow_dispatch`)
+
+Use case:
+- Validate production/staging API health without deploying.
+- Validate an existing order-tracking pair on demand.
+
 ## Required GitHub Secrets
 
 Set these in repository or environment secrets:
@@ -41,6 +49,7 @@ Optional smoke-check secrets:
 2. Create each required secret listed above.
 3. For production protection, prefer environment-level secrets and approvals.
 4. Re-run `Deploy Cloudflare` workflow using `workflow_dispatch`.
+5. (Optional) run `Smoke Check` workflow with `base_url` input.
 
 Recommended token scope:
 - Workers Scripts: Edit

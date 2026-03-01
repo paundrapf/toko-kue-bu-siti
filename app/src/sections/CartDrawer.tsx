@@ -1,6 +1,6 @@
 import { Minus, Plus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { Cart, Product } from '@/types';
@@ -45,6 +45,9 @@ export function CartDrawer({
               </span>
             )}
           </SheetTitle>
+          <SheetDescription className="sr-only">
+            Tinjau item di keranjang, ubah jumlah, dan lanjutkan ke checkout.
+          </SheetDescription>
         </SheetHeader>
 
         {cart.items.length === 0 ? (

@@ -102,3 +102,5 @@ Output file: `docs/scope-boundary-and-change-control.md`
 - Manual Cloudflare deploy workflow added for release operations (`.github/workflows/deploy-cloudflare.yml`).
 - CI/CD secrets, preconditions, and rollback runbook documented in `docs/cloudflare-cicd-runbook.md`.
 - Post-deploy smoke test script added at `scripts/smoke-check.mjs` and wired to deploy workflow when `SMOKE_BASE_URL` is configured.
+- Standalone smoke-check workflow added for on-demand verification (`.github/workflows/smoke-check.yml`).
+- UI runtime findings from Playwright addressed (sheet dialog description and favicon).
